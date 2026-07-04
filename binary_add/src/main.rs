@@ -21,7 +21,11 @@ struct Cli {
 fn is_binary_string(s: &str) -> Result<String, String> {
     let bin_re = Regex::new(r"^[0-1]*$").unwrap();
     if bin_re.is_match(s) {
-        Ok(s.to_string())
+        if s.len() == 0 {
+            Ok("0".to_string())
+        } else {
+            Ok(s.to_string())
+        }
     } else {
         Err(format!("Input is not a string of 0s and 1s"))
     }
@@ -35,18 +39,353 @@ fn main() -> Result<(), String> {
     // '?' is an indeterminate bit of the answer
     let alphabet = vec!['0', '1', '+', 'F', 'T', '=', '?', '_'];
     // The *external* alphabet is just vec!['0', '1', '+', '=']
-    let mut program = Program::new(alphabet, State(2));
+    let mut program = Program::new(alphabet, State(26));
+    // If arg0 is n0 bits and arg1 is n1 bits, then the answer has at most 
+    // max(n0, n1) + 1 bits
     program.extend([
         // Initial State: State 1
 
-        (1, '0', 0, '0', Move::None),
-        (1, '1', 0, '1', Move::None),
-        (1, '+', 0, '+', Move::None),
-        (1, 'F', 0, 'F', Move::None),
-        (1, 'T', 0, 'T', Move::None),
-        (1, '=', 0, '=', Move::None),
-        (1, '_', 0, '_', Move::None),
+        // State-1: seeking-equals
+
+        // If we find something other than '=', skip it & keep seeking right
+        (1, '0', 1, '0', Move::Right),
+        (1, '1', 1, '1', Move::Right),
+        (1, '+', 1, '+', Move::Right),
+        (1, 'F', 1, 'F', Move::Right),
+        (1, 'T', 1, 'T', Move::Right),
+
+        // When we find the '=', skip it and step right
+        // Transition to State 2: marking-most-significant-bit
+        (1, '=', 2, '=', Move::Right),
+
+        // '_' is not expected to occur here
+
+        // State-2: marking-most-significant-bit
+        // Mark this as an indeterminate bit, possibly the most significant bit
+        // of the answer
+        // Transition to State 3: seeking-arg1-least-unmarked-bit
+        (2, '_', 3, '?', Move::Left),
+
+        // No other symbol is expected to occur here
+
+        // State-3: seeking-arg1-least-unmarked-bit
+
+        // When we find an unmarked bit, mark it
+        // Transition to State 4: seeking-plus-arg0-least-unmarked-bit
+        (3, '0', 4, 'F', Move::Left),
+        (3, '1', 4, 'T', Move::Left),
+
+        // If we find the '+', there are no unmarked bits left in arg1
+        // Transition to State 5: seeking-arg0-alone-least-unmarked-bit
+        (3, '+', 5, '+', Move::Left),
+
+        // Skip marked bits and continue
+        (3, 'F', 3, 'F', Move::Left),
+        (3, 'T', 3, 'T', Move::Left),
+        // Skip the equals sign and continue
+        (3, '=', 3, '=', Move::Left),
+        // Skip the '?' (previous indeterminate bits) and continue
+        (3, '?', 3, '?', Move::Left), 
+
+        // The '_' is not expected to occur here
         
+        // State 4: seeking-plus-arg0-least-unmarked-bit
+
+        // Skip unmarked bits (these are still in arg1) and continue
+        (4, '0', 4, '0', Move::Left),
+        (4, '1', 4, '1', Move::Left),
+
+        // Found plus
+        // Transition to State 6: seeking-arg0-least-unmarked-bit
+        (4, '+', 6, '+', Move::Left),
+
+        // State 5: seeking-arg0-alone-least-unmarked-bit
+        
+        // When we find an unmarked bit, mark it
+        // Transition to State 7: add-one-indeterminate-bit-from-arg0
+        (5, '0', 7, 'F', Move::Right),
+        (5, '1', 7, 'T', Move::Right),
+
+        // Skip marked bits and continue
+        (5, 'F', 5, 'F', Move::Left),
+        (5, 'T', 5, 'T', Move::Left),
+
+        // Skip '+', '=', and '?' and continue
+        (5, '+', 5, '+', Move::Left),
+        (5, '=', 5, '=', Move::Left),
+        (5, '?', 5, '?', Move::Left),
+
+        // If we find a '_', there are no unmarked bits left in arg0 either
+        // Transition to State 11: initialize
+        (5, '_', 11, '_', Move::Right),
+        
+        // State 6: seeking-arg0-least-unmarked-bit
+        
+        // When we find an unmarked bit, mark it
+        // Transition to State 8: add-one-indeterminate-bit-from-both
+        (6, '0', 8, 'F', Move::Right),
+        (6, '1', 8, 'T', Move::Right),
+
+        // Skip marked bits and continue
+        (6, 'F', 6, 'F', Move::Left),
+        (6, 'T', 6, 'T', Move::Left),
+
+        // If we find a '_', there are no unmarked bits left in arg0
+        // Transition to State 9: add-one-indeterminate-bit-from-arg1
+        (6, '_', 9, '_', Move::Right),
+
+        // State 7: add-one-indeterminate-bit-from-arg0
+
+        // Skip non-blank symbols and continue
+        (7, '0', 7, '0', Move::Right),
+        (7, '1', 7, '1', Move::Right),
+        (7, '+', 7, '+', Move::Right),
+        (7, 'F', 7, 'F', Move::Right),
+        (7, 'T', 7, 'T', Move::Right),
+        (7, '=', 7, '=', Move::Right),
+        (7, '?', 7, '?', Move::Right),
+
+        // On finding a blank, write an indeterminate bit
+        // There are no unmarked bits left in arg1
+        // Transition to State 5: seeking-arg0-alone-least-unmarked-bit
+        (7, '_', 5, '?', Move::Left),
+
+        // State 8: add-one-indeterminate-bit-from-both
+        
+        // Skip non-blank symbols and continue
+        (8, '0', 8, '0', Move::Right),
+        (8, '1', 8, '1', Move::Right),
+        (8, '+', 8, '+', Move::Right),
+        (8, 'F', 8, 'F', Move::Right),
+        (8, 'T', 8, 'T', Move::Right),
+        (8, '=', 8, '=', Move::Right),
+        (8, '?', 8, '?', Move::Right),
+
+        // On finding a blank, write an indeterminate bit
+        // Transition to State 3: seeking-arg1-least-unmarked-bit
+        (8, '_', 3, '?', Move::Left),
+
+        // State 9: add-one-indeterminate-bit-from-arg1
+
+        // Skip non-blank symbols and continue
+        (9, '0', 9, '0', Move::Right),
+        (9, '1', 9, '1', Move::Right),
+        (9, '+', 9, '+', Move::Right),
+        (9, 'F', 9, 'F', Move::Right),
+        (9, 'T', 9, 'T', Move::Right),
+        (9, '=', 9, '=', Move::Right),
+        (9, '?', 9, '?', Move::Right),
+
+        // On finding a blank, write an indeterminate bit
+        // There are no unmarked bits left in arg0
+        // Transition to State 10: seeking-arg1-alone-least-unmarked-bit
+        (9, '_', 10, '?', Move::Left),
+        
+        // State 10: seeking-arg1-alone-least-unmarked-bit
+
+        // When we find an unmarked bit, mark it
+        // Transition to State 9: add-one-indeterminate-bit-from-arg1
+        (10, '0', 9, 'F', Move::Right),
+        (10, '1', 9, 'T', Move::Right),
+
+        // Skip marked bits and continue
+        (10, 'F', 10, 'F', Move::Left),
+        (10, 'T', 10, 'T', Move::Left),
+
+        // Skip '=' and '?' and continue
+        (10, '=', 10, '=', Move::Left),
+        (10, '?', 10, '?', Move::Left),
+
+        // If we find a '+', there are no unmarked bits left in arg1 either
+        // Transition to State 12: seeking-left-blank
+        (10, '+', 12, '+', Move::Left),
+
+        // State 11: initialize
+
+        // Skip unmarked bits and continue
+        (11, '0', 11, '0', Move::Right),
+        (11, '1', 11, '1', Move::Right),
+        
+        // Skip '+' and continue
+        (11, '+', 11, '+', Move::Right),
+
+        // Unmark unmarked bits
+        (11, 'F', 11, '0', Move::Right),
+        (11, 'T', 11, '1', Move::Right),
+
+        // Found '='
+        // Transition to State 13: add-arg1-least-unmarked-bit
+        // Halt for now
+        (11, '=', 13, '=', Move::Left),
+
+        // State 12: seeking-left-blank
+
+        // Skip all non-blank characters and continue
+        (12, '0', 12, '0', Move::Left),
+        (12, '1', 12, '1', Move::Left),
+        (12, '+', 12, '+', Move::Left),
+        (12, 'F', 12, 'F', Move::Left),
+        (12, 'T', 12, 'T', Move::Left),
+        (12, '=', 12, '=', Move::Left),
+        (12, '?', 12, '?', Move::Left),
+
+        // Found '_'
+        // Transition to State 11: initialize
+        (12, '_', 11, '_', Move::Right),
+
+        // State 13: add-arg1-least-unmarked-bit
+
+        // Found unmarked bit
+        // Mark the bit
+        // Transition to State 14: find-arg0-add-least-unmarked-bit-to-0
+        //            or State 15: find-arg0-add-least-unmarked-bit-to-1
+        (13, '0', 14, 'F', Move::Left),
+        (13, '1', 15, 'T', Move::Left),
+
+        // Found '+'
+        // There are no unmarked bits left in arg1
+        // Transition to State 16: transfer-arg0-least-unmarked-bit
+        (13, '+', 16, '+', Move::Left),
+
+        // Skip marked bits and continue
+        (13, 'F', 13, 'F', Move::Left),
+        (13, 'T', 13, 'T', Move::Left),
+
+        // Skip '=' and '?' and continue
+        (13, '=', 13, '=', Move::Left),
+        (13, '?', 13, '?', Move::Left),
+
+        // State 14: find-arg0-add-least-unmarked-bit-to-0 and
+        // State 15: find-arg0-add-least-unmarked-bit-to-1
+
+        // Skip unmarked bits (of arg1) and continue
+        (14, '0', 14, '0', Move::Left),
+        (15, '0', 15, '0', Move::Left),
+        (14, '1', 14, '1', Move::Left),
+        (15, '1', 15, '1', Move::Left),
+
+        // Found '+'
+        // Transition to State 17: add-least-arg0-unmarked-bit-to-0 or
+        //               State 18: add-least-arg0-unmarked-bit-to-1
+        (14, '+', 17, '+', Move::Left),
+        (15, '+', 18, '+', Move::Left),
+
+        // State 16: transfer-arg0-least-unmarked-bit
+        
+        // Found unmarked bit
+        // Mark it and transfer it
+        // Transition to State 19: seek-end-of-sum-transfer-0
+        //            or State 20: seek-end-of-sum-transfer-1
+        (16, '0', 19, 'F', Move::Right),
+        (16, '1', 20, 'T', Move::Right),
+
+        // Found marked bit
+        // Skip and continue
+        (16, 'F', 16, 'F', Move::Left),
+        (16, 'T', 16, 'T', Move::Left),
+
+        // Found '_'
+        // There are no unmarked bits left in arg0 either
+        // Transition to State 21: unmark-right-and-halt
+        (16, '_', 21, '_', Move::Right),
+
+        // State 17: add-least-arg0-unmarked-bit-to-0 and
+        // State 18: add-least-arg0-unmarked-bit-to-1
+
+        // Found unmarked bit
+        // Mark the bit
+        // Transfer the sum to the least unmarked sum bit
+        // Remember the carry if any
+        // Transition to State 19: seek-end-of-sum-transfer-0
+        //        or State 20: seek-end-of-sum-transfer-1
+        //        or State 22: seek-end-of-sum-transfer-0-with-carry
+        (17, '0', 19, 'F', Move::Right),
+        (18, '0', 20, 'F', Move::Right),
+        (17, '1', 20, 'T', Move::Right),
+        (18, '1', 22, 'T', Move::Right),
+
+        // Skip marked bits and continue
+        (17, 'F', 17, 'F', Move::Left),
+        (18, 'F', 18, 'F', Move::Left),
+        (17, 'T', 17, 'T', Move::Left),
+        (18, 'T', 18, 'T', Move::Left),
+
+        // Found '_'
+        // There are no unmarked bits left in arg0
+        // Transfer the bit we have to the sum bit
+        (17, '_', 19, '_', Move::Right),
+        (18, '_', 20, '_', Move::Right),
+
+        // State 19: seek-end-of-sum-transfer-0 or
+        // State 20: seek-end-of-sum-transfer-1 or
+        // State 22: seek-end-of-sum-transfer-0-with-carry
+        
+        // Skip non-blank characters and continue
+        (19, '0', 19, '0', Move::Right),
+        (20, '0', 20, '0', Move::Right),
+        (22, '0', 22, '0', Move::Right),
+        (19, '1', 19, '1', Move::Right),
+        (20, '1', 20, '1', Move::Right),
+        (22, '1', 22, '1', Move::Right),
+        (19, '+', 19, '+', Move::Right),
+        (20, '+', 20, '+', Move::Right),
+        (22, '+', 22, '+', Move::Right),
+        (19, 'F', 19, 'F', Move::Right),
+        (20, 'F', 20, 'F', Move::Right),
+        (22, 'F', 22, 'F', Move::Right),
+        (19, 'T', 19, 'T', Move::Right),
+        (20, 'T', 20, 'T', Move::Right),
+        (22, 'T', 22, 'T', Move::Right),
+        (19, '=', 19, '=', Move::Right),
+        (20, '=', 20, '=', Move::Right),
+        (22, '=', 22, '=', Move::Right),
+        (19, '?', 19, '?', Move::Right),
+        (20, '?', 20, '?', Move::Right),
+        (22, '?', 22, '?', Move::Right),
+
+        // Found blank character
+        // Transition to seeking indeterminate character in sum to transfer to
+        (19, '_', 23, '_', Move::Left),
+        (20, '_', 24, '_', Move::Left),
+        (22, '_', 25, '_', Move::Left),
+
+        // State 21: unmark-right-and-halt
+
+        // Skip unmarked bits and continue
+        (21, '0', 21, '0', Move::Right),
+        (21, '1', 21, '1', Move::Right),
+
+        // Skip '+' and continue
+        (21, '+', 21, '+', Move::Right),
+
+        // Found marked bit
+        // Mark it and continue
+        (21, 'F', 21, '0', Move::Right),
+        (21, 'T', 21, '1', Move::Right),
+
+        // Found '=' sign
+        // Halt
+        (21, '=', 0, '=', Move::None),
+
+        // State 23: seeking-least-indeterminate-sum-bit-transfer-0
+        // State 24: seeking-least-indeterminate-sum-bit-transfer-1
+        // State 25: seeking-least-indeterminate-sum-bit-transfer-0-with-carry
+
+        // Skip determinate bits and continue
+        (23, '0', 23, '0', Move::Left),
+        (24, '0', 24, '0', Move::Left),
+        (25, '0', 25, '0', Move::Left),
+        (23, '1', 23, '1', Move::Left),
+        (24, '1', 24, '1', Move::Left),
+        (25, '1', 25, '1', Move::Left),
+
+        // Found indeterminate bit
+        // Fill it with the appropriate sum
+        // Halt for now
+        (23, '?', 0, '0', Move::None),
+        (24, '?', 0, '1', Move::None),
+        (25, '?', 0, '0', Move::None),
+
     ])?;
 
     let machine = Classic::new(program, '_')?;
