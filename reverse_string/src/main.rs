@@ -38,18 +38,18 @@ fn main() -> Result<(), String> {
 
         // State 1: seeking-left (seeking left bit of a pair to transpose)
 
-        // Current bit is 0; mark it with a prime (visited)
+        // Current bit is 0; mark it (visited)
         // Transition to State 4: seeking-right(left-0)
         (1, '0', 4, 'F', Move::Right), 
         
-        // Current bit is 1; mark it with a prime (visited)
+        // Current bit is 1; mark it (visited)
         // Transition to State 5: seeking-right(left-1)
         (1, '1', 5, 'T', Move::Right),
 
         // Current bit is already marked: we are done swapping bits
         // Transition to State 2: seeking-blank
         (1, 'F', 2, 'F', Move::Right),
-        (1, 'T', 2, 'F', Move::Right),
+        (1, 'T', 2, 'T', Move::Right),
 
         // We have hit the end of the string
         // We are done, so unmark everything before this point
