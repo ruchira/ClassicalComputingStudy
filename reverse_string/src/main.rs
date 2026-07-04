@@ -74,7 +74,6 @@ fn main() -> Result<(), String> {
         // If we are not on a marked bit, skip it and keep seeking left
         (3, '0', 3, '0', Move::Left),
         (3, '1', 3, '1', Move::Left),
-        (3, '_', 3, '_', Move::Left),   // Don't expect this to occur
 
         // If we are on a marked bit, unmark it and keep seeking left
         (3, 'F', 3, '0', Move::Left),
