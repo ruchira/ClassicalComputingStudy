@@ -157,11 +157,13 @@ fn main() -> Result<(), String> {
     let machine = Classic::new(program, '_')?;
     
     let input = Tape::from(args.text+"_");
-    println!("Input text: {:?}", input.as_vec().into_iter()
+    println!("Input text: {:?}", input.as_vec()
+                                        .into_iter()
                                         .filter(|c| **c != '_')
                                         .collect::<String>());
     let output = machine.translate_nrm(input.clone())?;
-    println!("Output text: {:?}", output.as_vec().into_iter()
+    println!("Output text: {:?}", output.as_vec()
+                                        .into_iter()
                                         .filter(|c| **c != '_')
                                         .collect::<String>());
 
