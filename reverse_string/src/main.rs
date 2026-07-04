@@ -126,10 +126,10 @@ fn main() -> Result<(), String> {
         (6, 'T', 2, 'T', Move::Right),
         (7, 'T', 2, 'T', Move::Right),
 
-        // If we run into a blank we can start unmarking
-        // Transition to State 3: unmarking
-        (6, '_', 3, '_', Move::Left),   // Don't expect this to occur
-        (7, '_', 3, '_', Move::Left),   // Don't expect this to occur
+        // If we run into a blank, halt
+        // Transition to State 0: termination
+        (6, '_', 0, '_', Move::None),   // Don't expect this to occur
+        (7, '_', 0, '_', Move::None),   // Don't expect this to occur
         
         // State 8: seeking-left(right-0) and State 9: seeking-left(right-1)
 
@@ -148,9 +148,10 @@ fn main() -> Result<(), String> {
         (8, 'T', 1, 'F', Move::Right),
         (9, 'T', 1, 'T', Move::Right),
 
-        // If we encounter a blank, go into the unmarking state
-        (8, '_', 3, '_', Move::Left),   // Don't expect this to occur
-        (9, '_', 3, '_', Move::Left),   // Don't expect this to occur
+        // If we encounter a blank, halt
+        // Transition to State 0: termination
+        (8, '_', 0, '_', Move::None),   // Don't expect this to occur
+        (9, '_', 0, '_', Move::None),   // Don't expect this to occur
         
     ])?;
 
