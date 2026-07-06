@@ -529,7 +529,7 @@ fn main() -> Result<(), String> {
         // Found determinate bit
         // Transition to State 38: write-final-carry
         (36, '0', 38, '0', Move::Left),
-        (36, '1', 38, '0', Move::Left),
+        (36, '1', 38, '1', Move::Left),
 
         // Skip indeterminate bit and continue
         (36, '?', 36, '?', Move::Right),
