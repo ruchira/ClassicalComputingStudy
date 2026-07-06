@@ -361,12 +361,11 @@ fn main() -> Result<(), String> {
         (21, 'F', 21, '0', Move::Right),
         (21, 'T', 21, '1', Move::Right),
 
-        // Found '=' sign
-        // Keep going
+        // Skip '=' and continue
         (21, '=', 21, '=', Move::Right),
 
         // Found '?'
-        // Turn it into a '0'
+        // Turn it into a '0' and continue
         (21, '?', 21, '0', Move::Right),
 
         // Found '_'
